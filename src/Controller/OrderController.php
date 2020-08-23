@@ -23,30 +23,37 @@ class OrderController extends AbstractController
         $entityManager = $this->getDoctrine()->getManager();
         $order = $entityManager->find(Order::class, $id);
         if ($order !== null) {
-            if ($sent === true) {
-                $entityManager->getConnection()->beginTransaction();
-                try {
-                    $order->setSent($sent);
-                    $entityManager->merge($order);
-                    $entityManager->flush();
-                    $entityManager->getConnection()->commit();
-                    $this->send([
-                        'COMMAND', 'GENERATE_VOUCHER_COMMAND'
-                    ]);
+            if (!$order->isSent()) {
+                if ($sent === true) {
+                    $entityManager->getConnection()->beginTransaction();
+                    try {
+                        $order->setSent($sent);
+                        $entityManager->merge($order);
+                        $entityManager->flush();
+                        $entityManager->getConnection()->commit();
+                        $this->send([
+                            'COMMAND', 'GENERATE_VOUCHER_COMMAND'
+                        ]);
+                        return $this->json([
+                            'Message' => 'Order sent successfully',
+                        ]);
+                    } catch (Exception $e) {
+                        $entityManager->getConnection()->rollBack();
+                        return $this->json([
+                            'Message' => 'Order sent status failed to persist',
+                        ]);
+                    }
+                } else {
                     return $this->json([
-                        'Message' => 'Order sent successfully',
-                    ]);
-                } catch (Exception $e) {
-                    $entityManager->getConnection()->rollBack();
-                    return $this->json([
-                        'Message' => 'Order sent status failed to persist',
+                        'Message' => 'Order sent status did not update: false',
                     ]);
                 }
             } else {
                 return $this->json([
-                    'Message' => 'Order sent status did not update: false',
+                    'Message' => 'Order already sent',
                 ]);
             }
+
         } else {
             return $this->json([
                 'Message' => 'Order does not exist',
