@@ -35,6 +35,10 @@ class PopulateOrdersCommand extends Command
                 $order->setTotalPrice($x * 30);
                 $entityManager->persist($order);
                 $entityManager->flush();
+            } else {
+                $savedOrder->setSent(false);
+                $entityManager->merge($savedOrder);
+                $entityManager->flush();
             }
         }
 

@@ -6,6 +6,7 @@ use App\Entity\Order;
 use Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use SymfonyBundles\KafkaBundle\DependencyInjection\Traits\ProducerTrait;
 
@@ -14,9 +15,19 @@ class OrderController extends AbstractController
     use ProducerTrait;
 
     /**
+     * @Route("/", name="index")
+     */
+    public function index()
+    {
+        return new Response(
+            '<html><body><h1>Order Module</h1></body></html>'
+        );
+    }
+
+    /**
      * @Route("/order/{id}", name="order")
      */
-    public function index(Request $request, string $id)
+    public function markOrderAsSent(Request $request, string $id)
     {
         $param = $request->query->get('sent');
         $sent = $param === 'true';
@@ -31,9 +42,9 @@ class OrderController extends AbstractController
                         $entityManager->merge($order);
                         $entityManager->flush();
                         $entityManager->getConnection()->commit();
-                        $this->send([
-                            'COMMAND', 'GENERATE_VOUCHER_COMMAND'
-                        ]);
+                        if ($order->getTotalPrice() > 100) {
+                            $this->send([$order->getId(), 'GENERATE_VOUCHER_COMMAND']);
+                        }
                         return $this->json([
                             'Message' => 'Order sent successfully',
                         ]);
