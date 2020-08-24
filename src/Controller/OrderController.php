@@ -5,9 +5,12 @@ namespace App\Controller;
 use App\Entity\Order;
 use Exception;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\SerializerInterface;
 use SymfonyBundles\KafkaBundle\DependencyInjection\Traits\ProducerTrait;
 
 class OrderController extends AbstractController
@@ -70,6 +73,17 @@ class OrderController extends AbstractController
                 'Message' => 'Order does not exist',
             ]);
         }
+    }
+
+    /**
+     * @Route("/orders", name="orders")
+     */
+    public function getOrders(SerializerInterface  $serializer)
+    {
+        $repository = $this->getDoctrine()->getRepository(Order::class);
+        $vouchers = $repository->findAll();
+        $data = $serializer->serialize($vouchers, JsonEncoder::FORMAT);
+        return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
     private function send(array $data): void
